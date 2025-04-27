@@ -1,0 +1,89 @@
+<script src="https://unpkg.com/3d-force-graph"></script>
+<script src="https://d3js.org/d3.v6.min.js"></script>
+
+<div class="control-panel">
+    <label for="dataRange">Taille du graphe :</label>
+    <input type="range" id="dataRange" min="5" max="100" value="20" step="5">
+    <span id="dataPercentage">20%</span>
+</div>
+
+<!-- Conteneur du graph -->
+<div id="3d-graph"></div>
+
+<script>
+const slider = document.getElementById('dataRange');
+const percentageDisplay = document.getElementById('dataPercentage');
+const elem = document.getElementById('3d-graph');
+let fullGraph = null;
+
+let graph = ForceGraph3D()(elem)
+  .backgroundColor('#1c1919')
+  .nodeColor('Extension')
+  .nodeLabel(node => `${node["id"]}`)
+  .forceEngine('d3')
+  .d3Force('charge', d3.forceManyBody().strength(-5))  // Réduction de la répulsion
+  .d3Force('center', d3.forceCenter(0, 0, 0))  // Recentre le graphe
+  .d3Force('link', d3.forceLink().id(d => d.id).strength(0.5))  // Stabilisation des liens
+  .d3Force('x', d3.forceX(d => d.year ? d.year * 10 : 0).strength(0.3))  // Organisation en ligne
+  .d3Force('y', d3.forceY(0).strength(0.01));  // Légère attraction vers Y = 0
+
+fetch('./data.json') // Ajoute le './' pour être explicite
+  .then(response => response.json())
+  .then(data => {
+    fullGraph = data;
+
+    // Extraire l'année depuis "Date de Creation"
+    fullGraph.nodes.forEach(node => {
+      if (node.attributes && node.attributes["Date de Creation"]) {
+        // Conversion explicite de la date pour être sûr
+        const date = new Date(node.attributes["Date de Creation"]);
+        if (!isNaN(date)) {
+          node.year = date.getFullYear();  // Extraire l'année
+        } else {
+          console.warn(`Date invalide pour le fichier ${node.id}: ${node.attributes["Date de Creation"]}`);
+        }
+      }
+    });
+
+    const years = fullGraph.nodes
+      .map(n => n.year)
+      .filter(y => y !== undefined);
+
+    if (years.length > 0) {
+      const xScale = d3.scaleLinear()
+        .domain([Math.min(...years), Math.max(...years)])
+        .range([-500, 500]);
+
+      // Fonction pour mettre à jour le graphique en fonction du slider
+      function updateGraph() {
+        const sampleSize = slider.value / 100;
+        percentageDisplay.textContent = `${slider.value}%`;
+
+        const filteredNodes = fullGraph.nodes
+          .sort(() => 0.01 - Math.random()) // Mélanger les nœuds
+          .slice(0, Math.ceil(fullGraph.nodes.length * sampleSize)); // Appliquer le filtre selon le slider
+
+        const filteredLinks = fullGraph.links.filter(link =>
+          filteredNodes.some(node => node.id === link.source.id || node.id === link.source) &&
+          filteredNodes.some(node => node.id === link.target.id || node.id === link.target)
+        );
+
+        filteredNodes.forEach(node => {
+          if (node.year) {
+            node.x = xScale(node.year); // Positionner selon l'année
+          }
+          node.y = (Math.random() - 0.5) * 200; // Position Y aléatoire
+        });
+
+        graph.graphData({ nodes: filteredNodes, links: filteredLinks });
+      }
+
+      // Appeler la fonction initialement pour afficher les données
+      updateGraph();
+
+      // Mettre à jour lors du changement du slider
+      slider.addEventListener('input', updateGraph);
+    }
+  })
+  .catch(error => console.error("Erreur lors de la récupération du fichier JSON:", error));
+</script>
