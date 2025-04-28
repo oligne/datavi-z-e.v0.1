@@ -1,10 +1,10 @@
 let points2 = [];
 const fixedSize = 3;
-const occurPerPoint = 2;
+const occurPerPoint = 1;
 const jitterAmount = 0.5;
 
 function setupPage2(){
-  points2 = [];
+  points2 = []; 
   for (let r of analyseDate.getRows()) {
     const ext       = r.get('Extension');
     const yearMonth = r.get('YearMonth');
