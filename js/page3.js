@@ -48,11 +48,14 @@ function setupPage3() {
   });
 }
 
+
 function drawPage3() {
+  // ─── Fond et UI commune ───
   if (lightMode) background(255, 255, 250);
-  else background(30);
+  else           background(30);
   drawCommonUI();
 
+  // ─── Axe temporel ───
   const centerY = height / 2;
   stroke(lightMode ? 50 : 200);
   strokeWeight(2);
@@ -64,12 +67,12 @@ function drawPage3() {
     line(x, centerY - 5, x, centerY + 5);
   });
 
+  // ─── Écriture des années ───
   noStroke();
   textFont(fontReg);
   textSize(14);
   fill(lightMode ? 0 : 255);
   textAlign(CENTER, BOTTOM);
-
   let drawn = new Set();
   months.forEach((m, i) => {
     let [y] = m.split('-');
@@ -80,118 +83,120 @@ function drawPage3() {
     }
   });
 
+  // ─── Reset hover point ext ───
   hoverExt3 = null;
-  
-  // Important : ne reset PAS hoveredLegendExt ici ! (sinon ça saute au survol)
 
+  // ─── Détection du survol de la légende ───
+  const margin  = 20;
+  const legendY = height - 100;
+  const countExt = legendExts.length;
+  const spacing  = (width - 2 * margin) / countExt;
+
+  hoveredLegendExt = null;
+  legendExts.forEach((ext, i) => {
+    const x    = margin + spacing * i + spacing / 2;
+    const half = spacing / 2;
+    if (
+      mouseX > x - half &&
+      mouseX < x + half &&
+      mouseY > legendY &&
+      mouseY < legendY + 14
+    ) {
+      hoveredLegendExt = ext;
+    }
+  });
+
+  // ─── UPDATE PHYSIQUE ───
+  // Si aucune extension survolée, on met à jour tous les points.
+  // Sinon, on met à jour _seulement_ ceux qui correspondent (points rouges).
   noStroke();
   points2.forEach(p => {
-    // ─── Répulsion entre proches ───
+    if (hoveredLegendExt && p.ext !== hoveredLegendExt) {
+      // point non-sélectionné figé : on skippe l'update
+      return;
+    }
+    // ---- répulsion intra-cluster ----
     const others = clusters[p.yearMonth][p.ext];
-    const minD = p.size * 5;
+    const minD   = p.size * 5;
     for (let q of others) {
       if (q === p) continue;
       let dx = p.x - q.x, dy = p.y - q.y;
-      let d2 = dx * dx + dy * dy;
-      if (d2 < minD * minD) {
+      let d2 = dx*dx + dy*dy;
+      if (d2 < minD*minD) {
         let d = sqrt(d2) || 1;
         let push = (minD - d) * 0.01;
-        let ang = atan2(dy, dx);
-        p.vx += cos(ang) * push;
-        p.vy += sin(ang) * push;
+        let ang  = atan2(dy, dx);
+        p.vx += cos(ang)*push;
+        p.vy += sin(ang)*push;
       }
     }
-
-    // ─── Retour au centre du cluster ───
-    let dx = p.x - p.clusterX;
-    let dy = p.y - p.clusterY;
+    // ---- retour au centre ----
+    let dx = p.x - p.clusterX, dy = p.y - p.clusterY;
     p.vx += -dx * springK;
     p.vy += -dy * springK;
-
-    // ─── Effet souris doux ───
+    // ---- effet souris ----
     let dm2 = sq(p.x - mouseX) + sq(p.y - mouseY);
-    if (dm2 < mouseRepelDist * mouseRepelDist) {
+    if (dm2 < mouseRepelDist*mouseRepelDist) {
       let dm = sqrt(dm2) || 1;
-      let f = map(dm, 0, mouseRepelDist, mouseRepelForce, 0);
+      let f  = map(dm, 0, mouseRepelDist, mouseRepelForce, 0);
       let angM = atan2(p.y - mouseY, p.x - mouseX);
-      p.vx += cos(angM) * f;
-      p.vy += sin(angM) * f;
+      p.vx += cos(angM)*f;
+      p.vy += sin(angM)*f;
     }
-
-    // ─── Update mouvement ───
-    p.x += p.vx;
-    p.y += p.vy;
+    // ---- appliquer mouvement ----
+    p.x  += p.vx;
+    p.y  += p.vy;
     p.vx *= damping3;
     p.vy *= damping3;
   });
 
-  // ─── DESSIN des points APRÈS update ───
+
+  const bgAlpha = hoveredLegendExt ? 80 : 255;
+
+  // ─── DESSIN DES POINTS ───
+  // 1) Points NON-hover (en noir/blanc), ils sont figés si on survole
   points2.forEach(p => {
-    if (hoveredLegendExt) {
-      if (p.ext === hoveredLegendExt) {
-        fill(255, 0, 0); // rouge pétant
-      } else {
-        fill(lightMode ? 0 : 255); // neutre
-      }
+    if (hoveredLegendExt && p.ext === hoveredLegendExt) return;
+    if (lightMode) {
+      fill(0, bgAlpha);
     } else {
-      fill(lightMode ? 0 : 255); // neutre
+      fill(255, bgAlpha);
     }
     ellipse(p.x, p.y, p.size * 1.2);
-
-    // Détection hover pour tooltip
     if (dist(p.x, p.y, mouseX, mouseY) < p.size * 0.6) {
       hoverExt3 = p.ext;
     }
   });
+  // 2) Points hoverés (en rouge), dessinés en dernier -> toujours au premier plan
+  if (hoveredLegendExt) {
+    points2.forEach(p => {
+      if (p.ext === hoveredLegendExt) {
+        fill(255, 0, 0);
+        ellipse(p.x, p.y, p.size * 1.2);
+      }
+    });
+  }
 
-  // ─── Légende interactive ───
-  const margin = 20;
-  const legendY = height - 100;
-  const countExt = legendExts.length;
-  const spacing = (width - 2 * margin) / countExt;
-
+  // ─── DESSIN DE LA LÉGENDE ───
   textFont(fontReg);
   textSize(12);
   textAlign(CENTER, TOP);
-
-  let legendHovered = false; // pour savoir si la souris est sur une légende
-
   legendExts.forEach((ext, i) => {
     const x = margin + spacing * i + spacing / 2;
-    const half = spacing / 2;
-    const isHit = mouseX > x - half &&
-                  mouseX < x + half &&
-                  mouseY > legendY &&
-                  mouseY < legendY + 14;
-
-    if (isHit) {
-      hoveredLegendExt = ext;
-      legendHovered = true;
-    }
-
-    if (hoveredLegendExt === ext) {
-      fill(255, 0, 0); // rouge
-    } else {
-      fill(lightMode ? 0 : 255);
-    }
-
+    fill(hoveredLegendExt === ext ? color(255, 0, 0) : (lightMode ? 0 : 255));
     noStroke();
     text(ext, x, legendY);
   });
 
-  if (!legendHovered) {
-    hoveredLegendExt = null;
-  }
-
-  // ─── Tooltip si survol point ───
+  // ─── TOOLTIP SI SURVOL POINT ───
   if (hoverExt3) {
     push();
-    textFont(fontBold);
-    textSize(16);
-    fill(lightMode ? 0 : 255);
-    noStroke();
-    textAlign(LEFT, TOP);
-    text(hoverExt3, mouseX + 10, mouseY + 10);
+      textFont(fontBold);
+      textSize(16);
+      fill(lightMode ? 0 : 255);
+      noStroke();
+      textAlign(LEFT, TOP);
+      text(hoverExt3, mouseX + 10, mouseY + 10);
     pop();
   }
 }
