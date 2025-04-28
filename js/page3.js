@@ -151,7 +151,7 @@ function drawPage3() {
   });
 
 
-  const bgAlpha = hoveredLegendExt ? 80 : 255;
+  const bgAlpha = hoveredLegendExt ? 30 : 255;
 
   // ─── DESSIN DES POINTS ───
   // 1) Points NON-hover (en noir/blanc), ils sont figés si on survole
@@ -162,8 +162,8 @@ function drawPage3() {
     } else {
       fill(255, bgAlpha);
     }
-    ellipse(p.x, p.y, p.size * 1.2);
-    if (dist(p.x, p.y, mouseX, mouseY) < p.size * 0.6) {
+    ellipse(p.x, p.y, p.size * 0.8);
+    if (dist(p.x, p.y, mouseX, mouseY) < p.size * 3) {
       hoverExt3 = p.ext;
     }
   });
@@ -172,7 +172,7 @@ function drawPage3() {
     points2.forEach(p => {
       if (p.ext === hoveredLegendExt) {
         fill(255, 0, 0);
-        ellipse(p.x, p.y, p.size * 1.2);
+        ellipse(p.x, p.y, p.size * 1);
       }
     });
   }
