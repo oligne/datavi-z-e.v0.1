@@ -44,7 +44,7 @@ function drawPage2(){
   textSize(22);
   fill(lightMode ? 0 : 255);
   textAlign(CENTER, BOTTOM);
-  text("Leurs diversité racontent l'évolution de mes pratiques \n au fil du temps...", (windowWidth/2), 50);
+  text("Les expérimentations s'accumulent \n au fil des années.", (windowWidth/2), 50);
 
 
 

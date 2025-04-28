@@ -65,7 +65,7 @@ function drawCommonUI(){
   textSize(22);
   fill(lightMode ? 0 : 255);
   textAlign(CENTER, BOTTOM);
-  text("Leurs diversité racontent l'évolution de mes pratiques \n au fil du temps...", (windowWidth/2), 50);
+  text("Sans jamais vraiment être observées comme un tout.", (windowWidth/2), 50);
 
 
 
